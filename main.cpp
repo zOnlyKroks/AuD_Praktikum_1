@@ -7,7 +7,6 @@
 #include <vector>
 #include <sstream>
 #include <utility>
-#include <iomanip>
 #include <functional>
 
 template <typename T>
@@ -17,7 +16,6 @@ concept Comparable = requires(T a, T b) {
     { a == b } -> std::convertible_to<bool>;
 };
 
-// TreePrinter class adapted from the Java implementation
 template <typename T, typename NodeType>
 class TreePrinter {
     struct TreeLine {
@@ -25,7 +23,7 @@ class TreePrinter {
         int leftOffset;
         int rightOffset;
 
-        TreeLine(std::string l, int left, int right)
+        TreeLine(std::string l, const int left, const int right)
             : line(std::move(l)), leftOffset(left), rightOffset(right) {}
     };
 
@@ -84,7 +82,6 @@ class TreePrinter {
         int minCount = std::min(leftCount, rightCount);
         int maxCount = std::max(leftCount, rightCount);
 
-        // Find max root spacing
         int maxRootSpacing = 0;
         for (int i = 0; i < minCount; i++) {
             int spacing = leftTreeLines[i].rightOffset - rightTreeLines[i].leftOffset;
@@ -96,7 +93,6 @@ class TreePrinter {
 
         std::vector<TreeLine> allTreeLines;
 
-        // Add the root and branches
         allTreeLines.push_back(TreeLine(rootLabel, -(rootLabel.length() - 1) / 2, rootLabel.length() / 2));
 
         int leftTreeAdjust = 0;
@@ -104,7 +100,6 @@ class TreePrinter {
 
         if (leftTreeLines.empty()) {
             if (!rightTreeLines.empty()) {
-                // Right subtree only
                 if (squareBranches) {
                     if (lrAgnostic) {
                         allTreeLines.push_back(TreeLine("|", 0, 0));
@@ -118,7 +113,6 @@ class TreePrinter {
                 }
             }
         } else if (rightTreeLines.empty()) {
-            // Left subtree only
             if (squareBranches) {
                 if (lrAgnostic) {
                     allTreeLines.push_back(TreeLine("|", 0, 0));
@@ -131,7 +125,6 @@ class TreePrinter {
                 leftTreeAdjust = -2;
             }
         } else {
-            // Both left and right subtrees
             if (squareBranches) {
                 int adjust = (rootSpacing / 2) + 1;
                 auto horizontal = std::string(rootSpacing / 2, '-');
@@ -155,16 +148,13 @@ class TreePrinter {
             }
         }
 
-        // Join lines of subtrees
         for (int i = 0; i < maxCount; i++) {
             if (i >= leftTreeLines.size()) {
-                // Nothing remaining on left subtree
                 TreeLine rightLine = rightTreeLines[i];
                 rightLine.leftOffset += rightTreeAdjust;
                 rightLine.rightOffset += rightTreeAdjust;
                 allTreeLines.push_back(rightLine);
             } else if (i >= rightTreeLines.size()) {
-                // Nothing remaining on right subtree
                 TreeLine leftLine = leftTreeLines[i];
                 leftLine.leftOffset += leftTreeAdjust;
                 leftLine.rightOffset += leftTreeAdjust;
@@ -219,24 +209,20 @@ class AVLTree {
 
     std::unique_ptr<Node> root;
 
-    // Get height of a node (nullptr returns 0)
     [[nodiscard]] static int height(const Node* node) {
         return node ? node->height : 0;
     }
 
-    // Get balance factor of a node
     [[nodiscard]] int balanceFactor(const Node* node) const {
         return node ? height(node->left.get()) - height(node->right.get()) : 0;
     }
 
-    // Update height of a node
     void updateHeight(Node* node) {
         if (node) {
             node->height = 1 + std::max(height(node->left.get()), height(node->right.get()));
         }
     }
 
-    // Right rotation
     std::unique_ptr<Node> rotateRight(std::unique_ptr<Node> y) {
         auto x = std::move(y->left);
         y->left = std::move(x->right);
@@ -248,7 +234,6 @@ class AVLTree {
         return x;
     }
 
-    // Left rotation
     std::unique_ptr<Node> rotateLeft(std::unique_ptr<Node> x) {
         auto y = std::move(x->right);
         x->right = std::move(y->left);
@@ -260,38 +245,29 @@ class AVLTree {
         return y;
     }
 
-    // Balance the tree at a node
     std::unique_ptr<Node> balance(std::unique_ptr<Node> node) {
         if (!node) return nullptr;
 
         updateHeight(node.get());
         const int bf = balanceFactor(node.get());
 
-        // Left-heavy
         if (bf > 1) {
-            // Left-Right case
             if (balanceFactor(node->left.get()) < 0) {
                 node->left = rotateLeft(std::move(node->left));
             }
-            // Left-Left case
             return rotateRight(std::move(node));
         }
 
-        // Right-heavy
         if (bf < -1) {
-            // Right-Left case
             if (balanceFactor(node->right.get()) > 0) {
                 node->right = rotateRight(std::move(node->right));
             }
-            // Right-Right case
             return rotateLeft(std::move(node));
         }
 
-        // Already balanced
         return std::move(node);
     }
 
-    // Insert a value into the subtree rooted at node
     std::unique_ptr<Node> insert(std::unique_ptr<Node> node, T value) {
         if (!node) {
             return std::make_unique<Node>(std::move(value));
@@ -302,14 +278,12 @@ class AVLTree {
         } else if (value > node->value) {
             node->right = insert(std::move(node->right), value);
         } else {
-            // Value already exists, do nothing
             return std::move(node);
         }
 
         return balance(std::move(node));
     }
 
-    // Find the minimum value node in a subtree
     static Node* findMin(Node* node) {
         if (!node) return nullptr;
         while (node->left) {
@@ -318,7 +292,6 @@ class AVLTree {
         return node;
     }
 
-    // Remove a value from the subtree rooted at node
     std::unique_ptr<Node> remove(std::unique_ptr<Node> node, const T& value) {
         if (!node) return nullptr;
 
@@ -327,9 +300,6 @@ class AVLTree {
         } else if (value > node->value) {
             node->right = remove(std::move(node->right), value);
         } else {
-            // Node with the value found
-
-            // Case 1: Leaf node or node with only one child
             if (!node->left) {
                 return std::move(node->right);
             }
@@ -337,19 +307,15 @@ class AVLTree {
                 return std::move(node->left);
             }
 
-            // Case 2: Node with two children
-            // Find the inorder successor (minimum value in right subtree)
             Node* successor = findMin(node->right.get());
             node->value = successor->value;
 
-            // Remove the successor
             node->right = remove(std::move(node->right), successor->value);
         }
 
         return balance(std::move(node));
     }
 
-    // Search for a value in the subtree rooted at node
     const Node* search(const Node* node, const T& value) const {
         if (!node) return nullptr;
 
@@ -362,7 +328,6 @@ class AVLTree {
         return node; // Found
     }
 
-    // Inorder traversal of the subtree rooted at node
     void inorderTraversal(const Node* node, auto& visitor) const {
         if (!node) return;
 
@@ -374,38 +339,31 @@ class AVLTree {
 public:
     AVLTree() : root(nullptr) {}
 
-    // Insert a value into the tree
     void insert(T value) {
         root = insert(std::move(root), std::move(value));
     }
 
-    // Remove a value from the tree
     void remove(const T& value) {
         root = remove(std::move(root), value);
     }
 
-    // Check if the tree contains a value
     [[nodiscard]] bool contains(const T& value) const {
         return search(root.get(), value) != nullptr;
     }
 
-    // Get a value if it exists
     [[nodiscard]] std::optional<T> get(const T& value) const {
         const Node* node = search(root.get(), value);
         return node ? std::optional<T>(node->value) : std::nullopt;
     }
 
-    // Inorder traversal
     template <typename Visitor>
     void inorder(Visitor visitor) const {
         inorderTraversal(root.get(), visitor);
     }
 
-    // Print the tree with improved visual format
     void print(std::ostream& os = std::cout) const {
         os << "Tree structure:" << std::endl;
 
-        // Create a tree printer with appropriate functions for node access
         auto labelFn = [this](const Node* node) -> std::string {
             if (!node) return "";
             std::stringstream ss;
@@ -422,37 +380,31 @@ public:
         };
 
         TreePrinter<T, Node> printer(labelFn, leftFn, rightFn, os);
-        printer.setSquareBranches(true);  // Use ASCII box drawing characters
-        printer.setHspace(3);  // Set horizontal spacing between nodes
+        printer.setSquareBranches(true);
+        printer.setHspace(3);
         printer.printTree(root.get());
 
-        // Print inorder traversal
         os << "\nInorder traversal: ";
         inorder([&os](const T& value) { os << value << " "; });
         os << std::endl;
     }
 };
 
-// Example usage
 int main() {
     AVLTree<int> tree;
 
-    // Insert some values
     tree.insert(10);
     tree.insert(20);
-    tree.insert(30);  // This will cause rotations
+    tree.insert(30);
     tree.insert(40);
-    tree.insert(50);  // More rotations
+    tree.insert(50);
     tree.insert(25);
 
-    // Print the tree
     tree.print();
 
-    // Test search
     std::cout << "Contains 30: " << (tree.contains(30) ? "Yes" : "No") << std::endl;
     std::cout << "Contains 35: " << (tree.contains(35) ? "Yes" : "No") << std::endl;
 
-    // Test removal
     tree.remove(30);
     std::cout << "\nAfter removing 30:" << std::endl;
     tree.print();

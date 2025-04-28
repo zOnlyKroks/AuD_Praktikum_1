@@ -1,0 +1,1 @@
+Made in Clion 2025.1 with C++26 as the standard.
